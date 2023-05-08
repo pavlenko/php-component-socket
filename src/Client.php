@@ -98,5 +98,9 @@ final class Client implements ClientInterface
     {
         call_user_func($this->onClose, $message);
         $this->stream->close();
+
+        $this->onError = fn() => null;// Dummy callback
+        $this->onInput = fn() => null;// Dummy callback
+        $this->onClose = fn() => null;// Dummy callback
     }
 }

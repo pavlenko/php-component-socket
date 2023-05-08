@@ -58,5 +58,9 @@ final class Server implements ServerInterface
     {
         call_user_func($this->onClose, $message);
         $this->stream->close();
+
+        $this->onError = fn() => null;// Dummy callback
+        $this->onInput = fn() => null;// Dummy callback
+        $this->onClose = fn() => null;// Dummy callback
     }
 }
