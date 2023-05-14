@@ -104,6 +104,9 @@ final class Client implements ClientInterface
 
     public function close(string $message = null): void
     {
+        $this->select->detachStreamRD($this->socket->getResource());
+        $this->select->detachStreamWR($this->socket->getResource());
+
         call_user_func($this->onClose, $message);
         $this->socket->close();
 
