@@ -10,21 +10,22 @@ final class Client implements ClientInterface
     private \Closure $onError;
     private \Closure $onClose;
 
+    private bool $writable = true;
     private string $buffer = '';
 
-    private SocketInterface $stream;
+    private SocketInterface $socket;
     private SelectInterface $select;
 
-    public function __construct(SocketInterface $stream, SelectInterface $select)
+    public function __construct(SocketInterface $socket, SelectInterface $select)
     {
-        $this->stream = $stream;
-        $this->stream->setBlocking(false);
-        $this->stream->setBufferRD(0);
+        $this->socket = $socket;
+        $this->socket->setBlocking(false);
+        $this->socket->setBufferRD(0);
 
         $this->select = $select;
-        $this->select->attachStreamRD($stream->getResource(), function () {
+        $this->select->attachStreamRD($socket->getResource(), function () {
             try {
-                $data = $this->stream->recv();
+                $data = $this->socket->recv();
             } catch (RuntimeException $exception) {
                 call_user_func($this->onError, $exception);
                 return;
@@ -32,7 +33,7 @@ final class Client implements ClientInterface
 
             if ($data !== '') {
                 call_user_func($this->onInput, $data);
-            } elseif ($this->stream->isEOF()) {
+            } elseif ($this->socket->isEOF()) {
                 $this->close('Disconnected on RD');
             }
         });
@@ -44,12 +45,12 @@ final class Client implements ClientInterface
 
     public function getClientAddress(): ?string
     {
-        return $this->stream->getAddress(false);
+        return $this->socket->getAddress(false);
     }
 
     public function getRemoteAddress(): ?string
     {
-        return $this->stream->getAddress(true);
+        return $this->socket->getAddress(true);
     }
 
     public function setInputHandler(callable $handler): void
@@ -67,21 +68,25 @@ final class Client implements ClientInterface
         $this->onClose = \Closure::fromCallable($handler);
     }
 
-    public function write(string $data): void
+    public function write(string $data, bool $close = false): void
     {
-        if (!is_resource($this->stream->getResource())) {
+        if (!is_resource($this->socket->getResource())) {
             $this->close('Disconnected on WR');
             return;
         }
 
-        if (empty($data)) {
+        if (empty($data) || !$this->writable) {
             return;
         }
 
+        if ($close) {
+            $this->writable = false;
+        }
+
         $this->buffer .= $data;
-        $this->select->attachStreamWR($this->stream->getResource(), function () {
+        $this->select->attachStreamWR($this->socket->getResource(), function () {
             try {
-                $sent = $this->stream->send($this->buffer);
+                $sent = $this->socket->send($this->buffer);
             } catch (RuntimeException $exception) {
                 call_user_func($this->onError, $exception);
                 return;
@@ -89,7 +94,10 @@ final class Client implements ClientInterface
 
             $this->buffer = substr($this->buffer, $sent);
             if (empty($this->buffer)) {
-                $this->select->detachStreamWR($this->stream->getResource());
+                $this->select->detachStreamWR($this->socket->getResource());
+                if (!$this->writable) {
+                    $this->close();
+                }
             }
         });
     }
@@ -97,7 +105,7 @@ final class Client implements ClientInterface
     public function close(string $message = null): void
     {
         call_user_func($this->onClose, $message);
-        $this->stream->close();
+        $this->socket->close();
 
         $this->onError = fn() => null;// Dummy callback
         $this->onInput = fn() => null;// Dummy callback

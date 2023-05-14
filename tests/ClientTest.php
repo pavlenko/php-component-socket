@@ -209,10 +209,50 @@ final class ClientTest extends TestCase
             }));
         $select->expects(self::once())->method('detachStreamWR');
 
+        $closed = false;
+
         $client = new Client($socket, $select);
+        $client->setCloseHandler(function () use (&$closed) {
+            $closed = true;
+        });
         $client->write('DATA');
 
         $dispatch();
+        self::assertFalse($closed);
+    }
+
+    public function testWriteClose(): void
+    {
+        $socket = $this->createMock(SocketInterface::class);
+        $socket->expects(self::any())
+            ->method('getResource')
+            ->willReturn(fopen('php://temp', 'w+'));
+        $socket->expects(self::once())
+            ->method('send')
+            ->with('DATA')
+            ->willReturn(4);
+
+        $dispatch = null;
+
+        $select = $this->createMock(SelectInterface::class);
+        $select->expects(self::once())
+            ->method('attachStreamWR')
+            ->with(self::isType('resource'), self::callback(function ($cb) use (&$dispatch) {
+                $dispatch = $cb;
+                return true;
+            }));
+        $select->expects(self::once())->method('detachStreamWR');
+
+        $closed = false;
+
+        $client = new Client($socket, $select);
+        $client->setCloseHandler(function () use (&$closed) {
+            $closed = true;
+        });
+        $client->write('DATA', true);
+
+        $dispatch();
+        self::assertTrue($closed);
     }
 
     public function testClose(): void

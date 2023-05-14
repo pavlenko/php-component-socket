@@ -10,19 +10,19 @@ final class Server implements ServerInterface
     private \Closure $onError;
     private \Closure $onClose;
 
-    private SocketInterface $stream;
+    private SocketInterface $socket;
     private SelectInterface $select;
 
-    public function __construct(SocketInterface $stream, SelectInterface $select)
+    public function __construct(SocketInterface $socket, SelectInterface $select)
     {
-        $this->stream = $stream;
-        $this->stream->setBlocking(false);
-        $this->stream->setBufferRD(0);
+        $this->socket = $socket;
+        $this->socket->setBlocking(false);
+        $this->socket->setBufferRD(0);
 
         $this->select = $select;
-        $this->select->attachStreamRD($stream->getResource(), function () {
+        $this->select->attachStreamRD($socket->getResource(), function () {
             try {
-                $client = new Client($this->stream->accept(), $this->select);
+                $client = new Client($this->socket->accept(), $this->select);
                 call_user_func($this->onInput, $client);
             } catch (RuntimeException $exception) {
                 call_user_func($this->onError, $exception);
@@ -36,7 +36,7 @@ final class Server implements ServerInterface
 
     public function getAddress(): ?string
     {
-        return $this->stream->getAddress(false);
+        return $this->socket->getAddress(false);
     }
 
     public function setInputHandler(callable $handler): void
@@ -57,7 +57,7 @@ final class Server implements ServerInterface
     public function close(string $message = null): void
     {
         call_user_func($this->onClose, $message);
-        $this->stream->close();
+        $this->socket->close();
 
         $this->onError = fn() => null;// Dummy callback
         $this->onInput = fn() => null;// Dummy callback

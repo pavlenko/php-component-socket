@@ -43,8 +43,9 @@ interface ClientInterface
      * Write data to socket (buffered)
      *
      * @param string $data
+     * @param bool $close Close connection after send or not
      */
-    public function write(string $data): void;
+    public function write(string $data, bool $close = false): void;
 
     /**
      * Close connection
