@@ -8,6 +8,13 @@ use PE\Component\Socket\Exception\RuntimeException;
 interface FactoryInterface
 {
     /**
+     * Get configured select instance helper
+     *
+     * @return SelectInterface
+     */
+    public function getSelect(): SelectInterface;
+
+    /**
      * Create client socket
      *
      * @param string $address Address to the socket to connect to.

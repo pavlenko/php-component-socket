@@ -14,6 +14,11 @@ final class Factory implements FactoryInterface
         $this->select = $select;
     }
 
+    public function getSelect(): SelectInterface
+    {
+        return $this->select;
+    }
+
     public function createClient(string $address, array $context = [], ?float $timeout = null): ClientInterface
     {
         // Ensure scheme
