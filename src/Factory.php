@@ -33,9 +33,10 @@ final class Factory implements FactoryInterface
         }
 
         // Validate host
-        if (false === @inet_pton(trim($host, '[]'))) {
+        if (false === @inet_pton(trim($host, '[]'))
+            && false === filter_var(trim($host, '[]'), FILTER_VALIDATE_DOMAIN)) {
             throw new InvalidArgumentException(
-                'Given URI "' . $address . '" does not contain a valid host IP (EINVAL)',
+                'Given URI "' . $address . '" does not contain a valid host IP or domain (EINVAL)',
                 SOCKET_EINVAL
             );
         }
@@ -81,9 +82,10 @@ final class Factory implements FactoryInterface
         }
 
         // Validate host
-        if (false === @inet_pton(trim($host, '[]'))) {
+        if (false === @inet_pton(trim($host, '[]'))
+            && false === filter_var(trim($host, '[]'), FILTER_VALIDATE_DOMAIN)) {
             throw new InvalidArgumentException(
-                'Given URI "' . $address . '" does not contain a valid host IP (EINVAL)',
+                'Given URI "' . $address . '" does not contain a valid host IP or domain (EINVAL)',
                 SOCKET_EINVAL
             );
         }
